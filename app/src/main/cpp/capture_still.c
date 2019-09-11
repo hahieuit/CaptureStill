@@ -89,207 +89,207 @@ static int g_bpp = 16;
 static int g_camera_framerate = 30;
 static int g_capture_mode = 1;
 static char g_v4l_device[100] = "/dev/video0";
-static const char *classPathName = "com/example/caturestill/MainActivity";
+static const char *classPathName = "com/example/capturestill/MainActivity";
 
 enum results{failed=-1, success, file_already_exist};
 
 /* Convert to YUV420 format */
 void fmt_convert(char *dest, char *src, struct v4l2_format fmt)
 {
-        int row, col, pos = 0;
-        int bpp, yoff, uoff, voff;
+    int row, col, pos = 0;
+    int bpp, yoff, uoff, voff;
 
-        if (fmt.fmt.pix.pixelformat == IPU_PIX_FMT_YUYV) {
-                bpp = 2;
-                yoff = 0;
-                uoff = 1;
-                voff = 3;
-        }
-        else if (fmt.fmt.pix.pixelformat == IPU_PIX_FMT_UYVY) {
-                bpp = 2;
-                yoff = 1;
-                uoff = 0;
-                voff = 2;
-        }
-        else {	/* YUV444 */
-                bpp = 4;
-                yoff = 0;
-                uoff = 1;
-                voff = 2;
-        }
+    if (fmt.fmt.pix.pixelformat == IPU_PIX_FMT_YUYV) {
+        bpp = 2;
+        yoff = 0;
+        uoff = 1;
+        voff = 3;
+    }
+    else if (fmt.fmt.pix.pixelformat == IPU_PIX_FMT_UYVY) {
+        bpp = 2;
+        yoff = 1;
+        uoff = 0;
+        voff = 2;
+    }
+    else {	/* YUV444 */
+        bpp = 4;
+        yoff = 0;
+        uoff = 1;
+        voff = 2;
+    }
 
-        /* Copy Y */
-        for (row = 0; row < fmt.fmt.pix.height; row++)
-                for (col = 0; col < fmt.fmt.pix.width; col++)
-                        dest[pos++] = src[row * fmt.fmt.pix.bytesperline + col * bpp + yoff];
+    /* Copy Y */
+    for (row = 0; row < fmt.fmt.pix.height; row++)
+        for (col = 0; col < fmt.fmt.pix.width; col++)
+            dest[pos++] = src[row * fmt.fmt.pix.bytesperline + col * bpp + yoff];
 
-        /* Copy U */
-        for (row = 0; row < fmt.fmt.pix.height; row += 2) {
-                for (col = 0; col < fmt.fmt.pix.width; col += 2)
-                        dest[pos++] = src[row * fmt.fmt.pix.bytesperline + col * bpp + uoff];
-        }
+    /* Copy U */
+    for (row = 0; row < fmt.fmt.pix.height; row += 2) {
+        for (col = 0; col < fmt.fmt.pix.width; col += 2)
+            dest[pos++] = src[row * fmt.fmt.pix.bytesperline + col * bpp + uoff];
+    }
 
-        /* Copy V */
-        for (row = 0; row < fmt.fmt.pix.height; row += 2) {
-                for (col = 0; col < fmt.fmt.pix.width; col += 2)
-                        dest[pos++] = src[row * fmt.fmt.pix.bytesperline + col * bpp + voff];
-        }
+    /* Copy V */
+    for (row = 0; row < fmt.fmt.pix.height; row += 2) {
+        for (col = 0; col < fmt.fmt.pix.width; col += 2)
+            dest[pos++] = src[row * fmt.fmt.pix.bytesperline + col * bpp + voff];
+    }
 }
 
 int bytes_per_pixel(int fmt)
 {
-	switch (fmt) {
-	case IPU_PIX_FMT_YUV420P:
-	case IPU_PIX_FMT_YUV422P:
-	case IPU_PIX_FMT_NV12:
-		return 1;
-		break;
-	case IPU_PIX_FMT_RGB565:
-	case IPU_PIX_FMT_YUYV:
-	case IPU_PIX_FMT_UYVY:
-		return 2;
-		break;
-	case IPU_PIX_FMT_BGR24:
-	case IPU_PIX_FMT_RGB24:
-		return 3;
-		break;
-	case IPU_PIX_FMT_BGR32:
-	case IPU_PIX_FMT_BGRA32:
-	case IPU_PIX_FMT_RGB32:
-	case IPU_PIX_FMT_RGBA32:
-	case IPU_PIX_FMT_ABGR32:
-		return 4;
-		break;
-	default:
-		return 1;
-		break;
-	}
-	return 0;
+    switch (fmt) {
+        case IPU_PIX_FMT_YUV420P:
+        case IPU_PIX_FMT_YUV422P:
+        case IPU_PIX_FMT_NV12:
+            return 1;
+            break;
+        case IPU_PIX_FMT_RGB565:
+        case IPU_PIX_FMT_YUYV:
+        case IPU_PIX_FMT_UYVY:
+            return 2;
+            break;
+        case IPU_PIX_FMT_BGR24:
+        case IPU_PIX_FMT_RGB24:
+            return 3;
+            break;
+        case IPU_PIX_FMT_BGR32:
+        case IPU_PIX_FMT_BGRA32:
+        case IPU_PIX_FMT_RGB32:
+        case IPU_PIX_FMT_RGBA32:
+        case IPU_PIX_FMT_ABGR32:
+            return 4;
+            break;
+        default:
+            return 1;
+            break;
+    }
+    return 0;
 }
 
 int v4l_capture_setup(int * fd_v4l)
 {
-        struct v4l2_streamparm parm;
-        struct v4l2_format fmt;
-        struct v4l2_crop crop;
-        int ret = 0;
+    struct v4l2_streamparm parm;
+    struct v4l2_format fmt;
+    struct v4l2_crop crop;
+    int ret = 0;
 
-        if ((*fd_v4l = open(g_v4l_device, O_RDWR, 0)) < 0)
-        {
-                printf("Unable to open %s\n", g_v4l_device);
-                return -1;
-        }
+    if ((*fd_v4l = open(g_v4l_device, O_RDWR, 0)) < 0)
+    {
+        printf("Unable to open %s\n", g_v4l_device);
+        return -1;
+    }
 
-        sleep(3);
-        printf("capturing after 3 seconds");
-	parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	parm.parm.capture.timeperframe.numerator = 1;
-	parm.parm.capture.timeperframe.denominator = g_camera_framerate;
-	parm.parm.capture.capturemode = g_capture_mode;
+    sleep(1);
+    printf("capturing after 1 seconds");
+    parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    parm.parm.capture.timeperframe.numerator = 1;
+    parm.parm.capture.timeperframe.denominator = g_camera_framerate;
+    parm.parm.capture.capturemode = g_capture_mode;
 
-	if ((ret = ioctl(*fd_v4l, VIDIOC_S_PARM, &parm)) < 0)
-	{
-		printf("VIDIOC_S_PARM failed\n");
-		return ret;
-	}
-
-	crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	crop.c.left = g_left;
-	crop.c.top = g_top;
-	crop.c.width = g_width;
-	crop.c.height = g_height;
-	if ((ret = ioctl(*fd_v4l, VIDIOC_S_CROP, &crop)) < 0)
-	{
-		printf("set cropping failed\n");
-		return ret;
-	}
-
-	memset(&fmt, 0, sizeof(fmt));
-        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        fmt.fmt.pix.pixelformat = g_pixelformat;
-        fmt.fmt.pix.width = g_width;
-        fmt.fmt.pix.height = g_height;
-        fmt.fmt.pix.sizeimage = fmt.fmt.pix.width * fmt.fmt.pix.height * g_bpp / 8;
-        fmt.fmt.pix.bytesperline = g_width * bytes_per_pixel(g_pixelformat);
-
-        if ((ret = ioctl(*fd_v4l, VIDIOC_S_FMT, &fmt)) < 0)
-        {
-                printf("set format failed\n");
-                return ret;
-        }
-
+    if ((ret = ioctl(*fd_v4l, VIDIOC_S_PARM, &parm)) < 0)
+    {
+        printf("VIDIOC_S_PARM failed\n");
         return ret;
+    }
+
+    crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    crop.c.left = g_left;
+    crop.c.top = g_top;
+    crop.c.width = g_width;
+    crop.c.height = g_height;
+    if ((ret = ioctl(*fd_v4l, VIDIOC_S_CROP, &crop)) < 0)
+    {
+        printf("set cropping failed\n");
+        return ret;
+    }
+
+    memset(&fmt, 0, sizeof(fmt));
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    fmt.fmt.pix.pixelformat = g_pixelformat;
+    fmt.fmt.pix.width = g_width;
+    fmt.fmt.pix.height = g_height;
+    fmt.fmt.pix.sizeimage = fmt.fmt.pix.width * fmt.fmt.pix.height * g_bpp / 8;
+    fmt.fmt.pix.bytesperline = g_width * bytes_per_pixel(g_pixelformat);
+
+    if ((ret = ioctl(*fd_v4l, VIDIOC_S_FMT, &fmt)) < 0)
+    {
+        printf("set format failed\n");
+        return ret;
+    }
+
+    return ret;
 }
 
 int v4l_capture_image(int fd_v4l, const char *still_file)
 {
-        struct v4l2_format fmt;
-        int fd_still = 0, ret = 0;
-        char *buf1, *buf2;
-        struct stat buffer;
+    struct v4l2_format fmt;
+    int fd_still = 0, ret = 0;
+    char *buf1, *buf2;
+    struct stat buffer;
 
-        /* if file already exist just return file_already_exist do not overwrite the file*/
-        int exist = stat(&still_file,&buffer);
-        if(exist == 0) {
-            return file_already_exist;
-        }
+    /* if file already exist just return file_already_exist do not overwrite the file*/
+    int exist = stat(still_file,&buffer);
+    if(exist == 0) {
+        return file_already_exist;
+    }
 
-        if ((fd_still = open(&still_file, O_RDWR | O_CREAT | O_TRUNC, 0x0666)) < 0) {
-                printf("Unable to create y frame recording file\n");
-                return -1;
-        }
+    if ((fd_still = open(still_file, O_RDWR | O_CREAT | O_TRUNC, 0x0666)) < 0) {
+        printf("Unable to create y frame recording file\n");
+        return -1;
+    }
 
-        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        if ((ret = ioctl(fd_v4l, VIDIOC_G_FMT, &fmt)) < 0) {
-                printf("get format failed\n");
-                return ret;
-        } else {
-                printf("\t Width = %d\n", fmt.fmt.pix.width);
-                printf("\t Height = %d\n", fmt.fmt.pix.height);
-                printf("\t Image size = %d\n", fmt.fmt.pix.sizeimage);
-                printf("\t Pixel format = %c%c%c%c\n",
-                        (char)(fmt.fmt.pix.pixelformat & 0xFF),
-                        (char)((fmt.fmt.pix.pixelformat & 0xFF00) >> 8),
-                        (char)((fmt.fmt.pix.pixelformat & 0xFF0000) >> 16),
-                        (char)((fmt.fmt.pix.pixelformat & 0xFF000000) >> 24));
-        }
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    if ((ret = ioctl(fd_v4l, VIDIOC_G_FMT, &fmt)) < 0) {
+        printf("get format failed\n");
+        return ret;
+    } else {
+        printf("\t Width = %d\n", fmt.fmt.pix.width);
+        printf("\t Height = %d\n", fmt.fmt.pix.height);
+        printf("\t Image size = %d\n", fmt.fmt.pix.sizeimage);
+        printf("\t Pixel format = %c%c%c%c\n",
+               (char)(fmt.fmt.pix.pixelformat & 0xFF),
+               (char)((fmt.fmt.pix.pixelformat & 0xFF00) >> 8),
+               (char)((fmt.fmt.pix.pixelformat & 0xFF0000) >> 16),
+               (char)((fmt.fmt.pix.pixelformat & 0xFF000000) >> 24));
+    }
 
-        buf1 = (char *)malloc(fmt.fmt.pix.sizeimage);
-        buf2 = (char *)malloc(fmt.fmt.pix.sizeimage);
-        if (!buf1 || !buf2)
-                goto exit0;
+    buf1 = (char *)malloc(fmt.fmt.pix.sizeimage);
+    buf2 = (char *)malloc(fmt.fmt.pix.sizeimage);
+    if (!buf1 || !buf2)
+        goto exit0;
 
-        memset(buf1, 0, fmt.fmt.pix.sizeimage);
-        memset(buf2, 0, fmt.fmt.pix.sizeimage);
+    memset(buf1, 0, fmt.fmt.pix.sizeimage);
+    memset(buf2, 0, fmt.fmt.pix.sizeimage);
 
-        if (read(fd_v4l, buf1, fmt.fmt.pix.sizeimage) != fmt.fmt.pix.sizeimage) {
-                printf("v4l2 read error.\n");
-                goto exit0;
-        }
+    if (read(fd_v4l, buf1, fmt.fmt.pix.sizeimage) != fmt.fmt.pix.sizeimage) {
+        printf("v4l2 read error.\n");
+        goto exit0;
+    }
 
-        if ((g_convert == 1) && (g_pixelformat != IPU_PIX_FMT_YUV422P)
-		&& (g_pixelformat != IPU_PIX_FMT_YUV420P2)) {
-                fmt_convert(buf2, buf1, fmt);
-                //TODO: convert YUV420 to jpeg format
-                write(fd_still, buf2, fmt.fmt.pix.width * fmt.fmt.pix.height * 3 / 2);
-        }
-        else {
-                write(fd_still, buf1, fmt.fmt.pix.sizeimage);
-        }
+    if ((g_convert == 1) && (g_pixelformat != IPU_PIX_FMT_YUV422P)
+        && (g_pixelformat != IPU_PIX_FMT_YUV420P2)) {
+        fmt_convert(buf2, buf1, fmt);
+        //TODO: convert YUV420 to jpeg format
+        write(fd_still, buf2, fmt.fmt.pix.width * fmt.fmt.pix.height * 3 / 2);
+    }
+    else {
+        write(fd_still, buf1, fmt.fmt.pix.sizeimage);
+    }
 
-exit0:
-        if (buf1)
-                free(buf1);
-        if (buf2)
-                free(buf2);
-        close(fd_still);
-        close(fd_v4l);
+    exit0:
+    if (buf1)
+        free(buf1);
+    if (buf2)
+        free(buf2);
+    close(fd_still);
+    close(fd_v4l);
 
-	return ret;
+    return ret;
 }
 
-static jint
-capture_still(JNIEnv* env, jobject thiz, jstring path, jstring filename) {
+JNIEXPORT jint JNICALL
+Java_com_example_capturestill_MainActivity_capture_1still(JNIEnv* env, jobject thiz, jstring path, jstring filename) {
     int fd_v4l;
     int i;
     int ret;
@@ -303,40 +303,50 @@ capture_still(JNIEnv* env, jobject thiz, jstring path, jstring filename) {
 
     strcpy(still_file, path);
     strcat(still_file, filename);
-    ret = v4l_capture_image(fd_v4l, &still_file);
+    ret = v4l_capture_image(fd_v4l, still_file);
 
     return ret;
 
 }
 
+static jint
+add(JNIEnv* env, jobject thiz, jint a, jint b) {
+    int result = a + b;
+    ALOGI("%d + %d = %d", a, b, result);
+    return result;
+}
+
 static JNINativeMethod methods[] = {
-  {"capture_still", "(LJAVA/LANG/STRING,LJAVA/LANG/STRING)I", (void*)capture_still },
+        /*{"capture_still", "(LJAVA/LANG/STRING,LJAVA/LANG/STRING)I", (void*)capture_still },*/
+        {"add", "(II)I", (void*)add },
 };
 
 /*
  * Register several native methods for one class.
  */
+/*
 static int registerNativeMethods(JNIEnv* env, const char* className,
     JNINativeMethod* gMethods, int numMethods)
 {
     jclass clazz;
-    clazz = env->FindClass(className);
+    clazz = (*env)->FindClass(className, "camera_native_methds");
     if (clazz == NULL) {
         ALOGE("Native registration unable to find class '%s'", className);
         return JNI_FALSE;
     }
-    if (env->RegisterNatives(clazz, gMethods, numMethods) < 0) {
+    if ((*env)->RegisterNatives(clazz, gMethods, numMethods, ) < 0) {
         ALOGE("RegisterNatives failed for '%s'", className);
         return JNI_FALSE;
     }
     return JNI_TRUE;
 }
-
+*/
 /*
  * Register native methods for all classes we know about.
  *
  * returns JNI_TRUE on success.
  */
+/*
 static int registerNatives(JNIEnv* env)
 {
   if (!registerNativeMethods(env, classPathName,
@@ -345,11 +355,12 @@ static int registerNatives(JNIEnv* env)
   }
   return JNI_TRUE;
 }
+*/
 // ----------------------------------------------------------------------------
 /*
  * This is called by the VM when the shared library is first loaded.
  */
-
+/*
 typedef union {
     JNIEnv* env;
     void* venv;
@@ -378,3 +389,34 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)
 bail:
     return result;
 }
+*/
+
+jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
+{
+    JNIEnv *env;
+    jclass  cls;
+    jint    res;
+
+    (void)reserved;
+
+    printf("JNI_OnLoad libOv7740");
+    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_4) != JNI_OK){
+        printf("ERROR: GetEnv failed");
+        return -1;
+    }
+
+    cls = (*env)->FindClass(env, classPathName);
+    if (cls == NULL) {
+        printf("ERROR: FindClass failed");
+        return -1;
+    }
+
+    res = (*env)->RegisterNatives(env, cls, methods, sizeof(methods)/sizeof(*methods));
+    if (res != 0) {
+        printf("ERROR: RegisterNatives failed");
+        return -1;
+    }
+
+    return JNI_VERSION_1_4;
+}
+
