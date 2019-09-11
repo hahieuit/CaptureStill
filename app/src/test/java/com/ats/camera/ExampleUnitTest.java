@@ -1,4 +1,4 @@
-package com.example.caturestill;
+package com.ats.camera;
 
 import org.junit.Test;
 
