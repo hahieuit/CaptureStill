@@ -19,7 +19,7 @@ import java.util.Date;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private SimpleDateFormat s;
-    private capturestill cp;
+    private ov7740 cp;
 
     private Button btnCapture;
 
@@ -28,20 +28,22 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         s = new SimpleDateFormat("ddMMyyyyhhmmss");
-        cp = new capturestill();
+        cp = new ov7740();
         btnCapture = findViewById(R.id.btnCapture);
         btnCapture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                btnCapture.setEnabled(false);
                 String format = s.format(new Date());
-                int result = cp.capture_still(Environment.getExternalStorageDirectory() + "/capture" ,"image_" + format + ".jpg" );
+                int result = cp.captureImage(Environment.getExternalStorageDirectory() + "/capture" ,"image_" + format + ".jpg" );
                 Log.d("hahieuit",""+result);
+                btnCapture.setEnabled(true);
             }
         });
     }
 }
 
-class capturestill {
+class ov7740{
 
     static {
         System.loadLibrary("capov7740");
@@ -51,10 +53,10 @@ class capturestill {
     the api returns 1 value which means file already present.
     make sure filename ends with .jpeg example /data/capture/1.jpeg
     */
-    public static native int capture_still(String path, String filename);
+    public static native int captureImage(String path, String filename);
 
-    public capturestill()
+    public ov7740()
     {
-        Log.d("capturestill", "capturestill instance created");
+        Log.d("capov7740", "capov7740 instance created");
     }
 }
