@@ -53,7 +53,7 @@ class ov7740{
     the api returns 1 value which means file already present.
     make sure filename ends with .jpeg example /data/capture/1.jpeg
     */
-    public static native int captureImage(String path, String filename);
+    public native int captureImage(String path, String filename);
 
     public ov7740()
     {
