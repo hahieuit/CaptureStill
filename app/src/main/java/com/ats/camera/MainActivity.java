@@ -7,11 +7,15 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -26,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     private ov7740 cp;
 
     private Button btnCapture;
+    private TextView txtNotify;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
             s = new SimpleDateFormat("ddMMyyyyhhmmss");
             cp = new ov7740();
             btnCapture = findViewById(R.id.btnCapture);
+            txtNotify = findViewById(R.id.txtNotify);
             btnCapture.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -53,9 +59,31 @@ public class MainActivity extends AppCompatActivity {
                     }
                     int result = cp.captureImage(Environment.getExternalStorageDirectory() + "/capture" ,"image_" + format + ".jpg" );
                     Log.d("hahieuit",""+Environment.getExternalStorageDirectory() + "/capture");
+                    if(result == 0){
+                        ringtone();
+                        txtNotify.setText(getString(R.string.capture_success));
+                        txtNotify.setVisibility(View.VISIBLE);
+
+                    }else if(result == 1){
+                        txtNotify.setText(getString(R.string.exited));
+                        txtNotify.setVisibility(View.VISIBLE);
+                    }else{
+                        txtNotify.setText(getString(R.string.capture_fail));
+                        txtNotify.setVisibility(View.VISIBLE);
+                    }
                     btnCapture.setEnabled(true);
                 }
             });
+        }
+    }
+
+    public void ringtone(){
+        try {
+            Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
+            r.play();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

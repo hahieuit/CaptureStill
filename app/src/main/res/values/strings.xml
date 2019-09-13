@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">CatureStill</string>
+    <string name="capture_success">Capture Succeeded</string>
+    <string name="capture_fail">Capture Failed</string>
+    <string name="exited">Image already exists</string>
+    <string name="capture">Capture</string>
 </resources>
