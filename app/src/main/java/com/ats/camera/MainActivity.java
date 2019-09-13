@@ -13,11 +13,15 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
+    private static final int REQUEST_CODE = 1234;
+    private boolean mPermissions;
+
     private SimpleDateFormat s;
     private ov7740 cp;
 
@@ -27,19 +31,66 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        s = new SimpleDateFormat("ddMMyyyyhhmmss");
-        cp = new ov7740();
-        btnCapture = findViewById(R.id.btnCapture);
-        btnCapture.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                btnCapture.setEnabled(false);
-                String format = s.format(new Date());
-                int result = cp.captureImage(Environment.getExternalStorageDirectory() + "/capture" ,"image_" + format + ".jpg" );
-                Log.d("hahieuit",""+result);
-                btnCapture.setEnabled(true);
+
+        init();
+    }
+
+    private void init(){
+        if(!mPermissions){
+            verifyPermissions();
+        }else{
+            s = new SimpleDateFormat("ddMMyyyyhhmmss");
+            cp = new ov7740();
+            btnCapture = findViewById(R.id.btnCapture);
+            btnCapture.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    btnCapture.setEnabled(false);
+                    String format = s.format(new Date());
+                    File f = new File(Environment.getExternalStorageDirectory() + "/capture");
+                    if (!f.exists()) {
+                        f.mkdirs();
+                    }
+                    int result = cp.captureImage(Environment.getExternalStorageDirectory() + "/capture" ,"image_" + format + ".jpg" );
+                    Log.d("hahieuit",""+Environment.getExternalStorageDirectory() + "/capture");
+                    btnCapture.setEnabled(true);
+                }
+            });
+        }
+    }
+
+    public void verifyPermissions(){
+        Log.d(TAG, "verifyPermissions: asking user for permissions.");
+        String[] permissions = {
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.CAMERA};
+        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                permissions[0] ) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                permissions[1] ) == PackageManager.PERMISSION_GRANTED) {
+            mPermissions = true;
+            init();
+        } else {
+            ActivityCompat.requestPermissions(
+                    MainActivity.this,
+                    permissions,
+                    REQUEST_CODE
+            );
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if(requestCode == REQUEST_CODE){
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                init();
+            }else{
+                finish();
             }
-        });
+        }
     }
 }
 
