@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -41,6 +42,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void init(){
+        try {
+            Runtime.getRuntime().exec(new String[]{"su", "-c", "/system/bin/sh -c \"chmod 666 /dev/video0\""});
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         if(!mPermissions){
             verifyPermissions();
         }else{
